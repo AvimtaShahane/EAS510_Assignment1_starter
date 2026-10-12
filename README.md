@@ -134,3 +134,34 @@ five are 25% crops that keep too little of the image to match reliably. If I had
 time, I would try AKAZE or ORB as a fallback for low-texture images, multi-scale
 feature matching, or a quick texture check to decide when SIFT is likely to struggle.
 
+
+## Observed weakness in V1
+
+On the hard set, V1 rejected 31 of 60 images, mostly crops and rescales, and made
+no wrong matches. For example, original_00__crop_offcenter_keep75 scored only
+28/100: Rule 1 gave 0.39, Rule 2 gave 0.93 and Rule 3 gave 0.14. The histogram
+recognised the right original, but the other two rules depend on file size and
+pixel alignment, which cropping destroys, so the image was rejected.
+
+## Design decision for V2
+
+I added Rule 4, a SIFT feature matcher. It finds keypoints in both images, keeps
+the good matches with a ratio test, and uses RANSAC to count how many agree on one
+consistent transform. That does not depend on scale or position, so crops and
+resizes still match. I rebalanced the weights to 10/10/20/60 so a confident feature
+match can carry a decision on its own. Full credit is given at 60 inliers.
+
+## Effect of the change
+
+On the hard set, results went from 29 correct / 0 wrong / 31 rejected to
+56 correct / 0 wrong / 4 rejected. Across all 135 images there are 0 wrong matches,
+and all 15 random images are still rejected (highest score 21/100).
+
+## Trade-offs
+
+Rule 4 now carries 60 points, so the system leans heavily on one rule. When full
+credit was set at 30 inliers, two originals tied at 60 and the weak rules picked
+the wrong one; raising it to 60 fixed that but costs some recall. Twelve non-random
+images are still rejected: seven involve original_09, which has little texture, and
+five are 25% crops that keep too little content. SIFT is also slower than the V1
+rules.
