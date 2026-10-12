@@ -85,3 +85,43 @@ restart never touches GitHub.
 ## License
 
 Apache 2.0. See `LICENSE`.
+## Phase 2 Reflection
+
+**Failure diagnosed.** V1 falsely rejected cropped and rescaled hard images:
+31 of 60 rejected (crop_keep 15/20, crop_offcenter 10/10, resize_scale 6/10),
+with zero wrong matches. Example: original_00__crop_offcenter_keep75 scored
+28/100 (Rule 1 = 0.39, Rule 2 = 0.93, Rule 3 = 0.14) and was REJECTED even
+though the histogram identified the right original.
+
+**Cause.** Rules 1 and 3 depend on file size and on pixel scale/alignment,
+which crops destroy. Only the histogram survived, and one rule cannot reach
+the 50-point threshold.
+
+**Rule 4 (Features).** SIFT keypoints on CLAHE-normalized grayscale, Lowe ratio
+test (0.75), then a RANSAC similarity-transform fit. The score is the number of
+geometrically consistent inliers; the rule fires only with at least 10, so
+unrelated images score 0. It tolerates crops, scaling and small rotations.
+
+**Reweighting.** Weights are 10/10/20/60 (sum 100). An earlier 15/20/25/40 split
+still rejected 25% crops because Rule 4 could not reach 50 alone.
+
+**Results (hard set).**
+
+| Type | V1 correct/wrong/rejected | V2 correct/wrong/rejected |
+|---|---|---|
+| contrast | 10/0/0 | 10/0/0 |
+| crop_keep | 5/0/15 | 18/0/2 |
+| crop_offcenter | 0/0/10 | 9/0/1 |
+| resize_scale | 4/0/6 | 9/0/1 |
+| rotate | 10/0/0 | 10/0/0 |
+| Total | 29/0/31 | 56/0/4 |
+
+**Final V2 results (Rule 4 full credit at 60 inliers).** Across all 135 images:
+0 wrong matches, 12 non-random images rejected, all 15 random images rejected
+(max score 21/100). Rule 4 originally saturated at 30 inliers, letting a
+coincidental match tie the true original (modified_04_crop_50pct: original_00 = 60,
+original_04 = 60) and win on the weak size and histogram rules. Scaling credit
+to 60 inliers removed every wrong match. Remaining misses: seven involve
+original_09 (low texture, few SIFT keypoints) and five are 25% crops that keep
+too little content. Next steps: AKAZE/ORB as a fallback, multi-scale features,
+or a per-image texture check.
