@@ -116,12 +116,20 @@ still rejected 25% crops because Rule 4 could not reach 50 alone.
 | rotate | 10/0/0 | 10/0/0 |
 | Total | 29/0/31 | 56/0/4 |
 
-**Final V2 results (Rule 4 full credit at 60 inliers).** Across all 135 images:
-0 wrong matches, 12 non-random images rejected, all 15 random images rejected
-(max score 21/100). Rule 4 originally saturated at 30 inliers, letting a
-coincidental match tie the true original (modified_04_crop_50pct: original_00 = 60,
-original_04 = 60) and win on the weak size and histogram rules. Scaling credit
-to 60 inliers removed every wrong match. Remaining misses: seven involve
-original_09 (low texture, few SIFT keypoints) and five are 25% crops that keep
-too little content. Next steps: AKAZE/ORB as a fallback, multi-scale features,
-or a per-image texture check.
+**Where things ended up.** After the final changes, the system handled all 135 images
+without a single wrong match. Every one of the 15 random images was rejected (the
+highest score was 21/100), and 12 of the non-random images were rejected when they
+shouldn't have been.
+
+The change that made the biggest difference came late. At first I gave Rule 4 full
+credit at 30 inliers, but that turned out to be too generous. For modified_04_crop_50pct,
+original_00 and original_04 both maxed out at 60, so the two weak rules (size and
+histogram) ended up deciding the winner, and they picked the wrong one. Raising full
+credit to 60 inliers meant the score now grows with how many keypoints agree, so the
+true original pulled ahead and every wrong match disappeared.
+
+The 12 images that are still rejected fall into two groups. Seven involve original_09,
+which has very little texture, so SIFT finds too few keypoints to work with. The other
+five are 25% crops that keep too little of the image to match reliably. If I had more
+time, I would try AKAZE or ORB as a fallback for low-texture images, multi-scale
+feature matching, or a quick texture check to decide when SIFT is likely to struggle.
