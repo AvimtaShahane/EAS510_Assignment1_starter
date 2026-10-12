@@ -133,3 +133,4 @@ which has very little texture, so SIFT finds too few keypoints to work with. The
 five are 25% crops that keep too little of the image to match reliably. If I had more
 time, I would try AKAZE or ORB as a fallback for low-texture images, multi-scale
 feature matching, or a quick texture check to decide when SIFT is likely to struggle.
+
